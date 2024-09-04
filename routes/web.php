@@ -1,17 +1,13 @@
 <?php
 
+use App\Http\Controllers\Article\ArticleController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\Product\ProductController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', HomeController::class)->name('home');
 
-Route::middleware([
-    'auth:sanctum',
-    config('jetstream.auth_session'),
-    'verified',
-])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
-});
+// products
+
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/articles', [ArticleController::class, 'index'])->name('articles.index');
