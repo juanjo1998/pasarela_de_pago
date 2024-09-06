@@ -1,7 +1,9 @@
-<div class="max-w-md mx-auto p-6 bg-white shadow-md rounded-lg border border-gray-200 mt-12">
+<div class="max-w-screen-xl mx-auto p-6 bg-white shadow-md rounded-lg border border-gray-200 mt-12">
     <h2 class="text-xl font-semibold mb-4 text-gray-800">Update Payment Method</h2>
 
-    <form id="payment-form" class="space-y-4">
+    {{-- formulario de metodo de pago --}}
+
+    <form id="payment-form" class="space-y-4 mb-4">
         <div class="mb-4">
             <label for="card-holder-name" class="block text-sm font-medium text-gray-700">Card Holder Name</label>
             <input id="card-holder-name" type="text"
@@ -28,6 +30,81 @@
         </div>
     </form>
 
+    {{-- spinner --}}
+
+    <div class="justify-center items-center" wire:target="addPaymentMethod" wire:loading.flex>
+        <x-loading-spinner />
+    </div>
+
+    {{-- listado de metodos de pago --}}
+    @if (count($paymentMethods))
+        <div class="mx-auto max-w-screen-xl">
+            <h2 class="text-2xl font-semibold mb-4">Métodos de Pago</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-300 w-full">
+                    <thead>
+                        <tr>
+                            <th class="py-2 px-4 border-b">Tipo de Tarjeta</th>
+                            <th class="py-2 px-4 border-b">Nombre</th>
+                            <th class="py-2 px-4 border-b">Últimos 4 dígitos</th>
+                            <th class="py-2 px-4 border-b">Expiración</th>
+                            <th class="py-2 px-4 border-b">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($paymentMethods as $index => $paymentMethod)
+                            <tr wire:key="{{ $index }}">
+                                <td class="py-2 px-4 border-b">
+                                    {{ ucfirst($paymentMethod->card->brand) }}
+
+                                    @if (auth()->user()->hasDefaultPaymentMethod())
+                                        @if (auth()->user()->defaultPaymentMethod()->id == $paymentMethod->id)
+                                            <span
+                                                class="bg-blue-100 text-blue-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">Predeterminada</span>
+                                        @endif
+                                    @endif
+
+                                </td>
+                                <td class="py-2 px-4 border-b">{{ $paymentMethod->billing_details->name }}</td>
+                                <td class="py-2 px-4 border-b">{{ $paymentMethod->card->last4 }}</td>
+                                <td class="py-2 px-4 border-b">
+                                    {{ $paymentMethod->card->exp_month }}/{{ $paymentMethod->card->exp_year }}</td>
+                                <td class="py-2 px-4 border-b flex">
+
+                                    {{-- usando propiedad computada --}}
+                                    @if ($this->hasDefaultPaymentMethod)
+                                        {{-- usando propiedad computada --}}
+                                        @if ($this->defaultPaymentMethod->id != $paymentMethod->id)
+                                            <a wire:click="defaultPaymentMethod('{{ $paymentMethod->id }}')"
+                                                wire:target="defaultPaymentMethod('{{ $paymentMethod->id }}')"
+                                                wire:loading.attr="disabled"
+                                                class="inline-block bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-700 cursor-pointer disabled:opacity-25">
+                                                Predeterminada
+                                            </a>
+
+                                            <a wire:click="deletePaymentMethod('{{ $paymentMethod->id }}')"
+                                                wire:target="deletePaymentMethod('{{ $paymentMethod->id }}')"
+                                                wire:loading.attr="disabled"
+                                                class="ml-3 inline-block bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 cursor-pointer disabled:opacity-25">
+                                                Eliminar
+                                            </a>
+                                        @endif
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="py-4 text-center text-gray-500">
+                                    No tienes ningún método de pago registrado.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
+
     {{-- JS --}}
     @push('js')
         <script src="https://js.stripe.com/v3/"></script>
@@ -47,7 +124,6 @@
                 e.preventDefault()
 
                 const clientSecret = cardButton.dataset.secret;
-                console.log(clientSecret)
 
                 cardButton.disabled = true
                 cardButton.classList.add('opacity-50', 'cursor-not-allowed');
@@ -75,6 +151,7 @@
                     errorMessageText.textContent = error.message
 
                 } else {
+                    console.log(setupIntent)
                     // clean form
                     cardHolderName.value = ""
                     cardElement.clear()
